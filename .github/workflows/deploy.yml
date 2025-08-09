@@ -3,40 +3,33 @@ name: CI & Deploy
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
-  build-test-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
+
+    # Map the secret to an env var so the "if:" check is simple
+    env:
+      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      - run: npm ci
 
-      # Run tests if they exist, skip if not
+      - name: Install deps
+        run: npm ci
+
       - name: Run tests (skip if none)
         run: |
-          if npm run -s test >/dev/null 2>&1; then
-            echo "✅ Tests passed or ran successfully"
-          else
-            echo "⚠️ No tests found or tests failed – continuing"
-          fi
+          npm run -s test || echo "no tests – continuing"
 
-      # Deploy via Deploy Hook (preferred)
-      - name: Deploy via Deploy Hook
-        if: success() && secrets.DEPLOY_HOOK_URL != ''
-        run: curl -sS -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
-
-      # Deploy via Render API (fallback)
-      - name: Deploy via Render API (fallback)
-        if: success() && (secrets.DEPLOY_HOOK_URL == '' || secrets.DEPLOY_HOOK_URL == null) && secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != ''
-        run: |
-          curl -sS -X POST \
-            -H "Accept: application/json" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}' \
-            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
+      - name: Deploy to Render via Deploy Hook
+        if: ${{ env.DEPLOY_HOOK_URL != '' }}
+        run: curl -sS -X POST "$DEPLOY_HOOK_URL"
