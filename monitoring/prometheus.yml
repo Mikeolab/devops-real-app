@@ -6,4 +6,4 @@ scrape_configs:
     metrics_path: /metrics
     scheme: https
     static_configs:
-      - targets: ['<APP_HOST>']
+      - targets: ['https://devops-real-app.onrender.com/']
