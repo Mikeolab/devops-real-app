@@ -1,0 +1,55 @@
+name: CI → Deploy (gated)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:ci
+
+  deploy_prod:
+    name: Deploy to Render + Smoke
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+      APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+    steps:
+      - name: Deploy via Render Deploy Hook
+        if: ${{ env.DEPLOY_HOOK_URL != '' }}
+        run: curl -sS -X POST "$DEPLOY_HOOK_URL"
+
+      - name: Wait for /health to be 200
+        shell: bash
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is empty. Set it to your Render URL, e.g. https://devops-real-app.onrender.com"
+            exit 1
+          fi
+          echo "Waiting for $APP_BASE_URL/health ..."
+          for i in {1..40}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$APP_BASE_URL/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "✅ Prod healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "❌ Health check failed"
+          exit 1
