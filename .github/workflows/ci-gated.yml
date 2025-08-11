@@ -13,11 +13,13 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
-# Global knobs; override per-step if needed
+# Global knobs; override per-job/step if needed
 env:
   HEALTH_PATH: /health          # change if your health route differs
-  SMOKE_MAX_WAIT: 300           # seconds to wait for 200
   SMOKE_INTERVAL: 5             # seconds between checks
+  GRACE_SECONDS: 45             # seconds to wait after hook before first probe
+  SMOKE_MAX_WAIT_STAGING: 420   # 7m for staging
+  SMOKE_MAX_WAIT_PROD: 900      # 15m for prod
 
 jobs:
   test:
@@ -35,7 +37,7 @@ jobs:
   deploy-staging:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     # MUST match your GitHub Environment name exactly
     environment: Staging
 
@@ -44,38 +46,46 @@ jobs:
         # Staging env secret
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
 
+      - name: Grace period before health checks (Staging)
+        run: sleep ${{ env.GRACE_SECONDS }}
+
       - name: Wait for /health to be 200 (Staging)
         shell: bash
         env:
-          APP_BASE_URL:    ${{ secrets.APP_BASE_URL }} # Staging env secret
-          HEALTH_PATH:     ${{ env.HEALTH_PATH }}
-          SMOKE_MAX_WAIT:  ${{ env.SMOKE_MAX_WAIT }}
-          SMOKE_INTERVAL:  ${{ env.SMOKE_INTERVAL }}
+          APP_BASE_URL:   ${{ secrets.APP_BASE_URL }} # Staging env secret
+          HEALTH_PATH:    ${{ env.HEALTH_PATH }}
+          MAX_WAIT:       ${{ env.SMOKE_MAX_WAIT_STAGING }}
+          INTERVAL:       ${{ env.SMOKE_INTERVAL }}
         run: |
           if [ -z "$APP_BASE_URL" ]; then
             echo "APP_BASE_URL (Staging) is empty. Set it to your Render URL, e.g. https://<app>.onrender.com"
             exit 1
           fi
 
-          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
-          end=$(( SECONDS + SMOKE_MAX_WAIT ))
+          URL="${APP_BASE_URL%/}${HEALTH_PATH}"
+          echo "Probing Staging health endpoint"
+
+          end=$(( SECONDS + MAX_WAIT ))
           while [ $SECONDS -lt $end ]; do
-            code=$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
+            code=$(curl -s -L \
+                      --connect-timeout 5 --max-time 10 \
+                      -o /dev/null -w "%{http_code}" \
+                      "${URL}?ts=$(date +%s)" || true)
             echo "HTTP $code"
             if [ "$code" = "200" ]; then
               echo "Staging healthy ✅"
               exit 0
             fi
-            sleep "$SMOKE_INTERVAL"
+            sleep "$INTERVAL"
           done
 
-          echo "❌ Staging health check failed after ${SMOKE_MAX_WAIT}s"
+          echo "❌ Staging health check failed after ${MAX_WAIT}s"
           exit 1
 
   deploy-prod:
     needs: deploy-staging
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     # MUST match your GitHub Environment name exactly (approval gate lives here)
     environment: Prod
 
@@ -84,30 +94,38 @@ jobs:
         # Prod env secret
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
 
+      - name: Grace period before health checks (Prod)
+        run: sleep ${{ env.GRACE_SECONDS }}
+
       - name: Wait for /health to be 200 (Prod)
         shell: bash
         env:
-          APP_BASE_URL:    ${{ secrets.APP_BASE_URL }} # Prod env secret
-          HEALTH_PATH:     ${{ env.HEALTH_PATH }}
-          SMOKE_MAX_WAIT:  ${{ env.SMOKE_MAX_WAIT }}
-          SMOKE_INTERVAL:  ${{ env.SMOKE_INTERVAL }}
+          APP_BASE_URL:   ${{ secrets.APP_BASE_URL }} # Prod env secret
+          HEALTH_PATH:    ${{ env.HEALTH_PATH }}
+          MAX_WAIT:       ${{ env.SMOKE_MAX_WAIT_PROD }}
+          INTERVAL:       ${{ env.SMOKE_INTERVAL }}
         run: |
           if [ -z "$APP_BASE_URL" ]; then
             echo "APP_BASE_URL (Prod) is empty."
             exit 1
           fi
 
-          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
-          end=$(( SECONDS + SMOKE_MAX_WAIT ))
+          URL="${APP_BASE_URL%/}${HEALTH_PATH}"
+          echo "Probing Prod health endpoint"
+
+          end=$(( SECONDS + MAX_WAIT ))
           while [ $SECONDS -lt $end ]; do
-            code=$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
+            code=$(curl -s -L \
+                      --connect-timeout 5 --max-time 10 \
+                      -o /dev/null -w "%{http_code}" \
+                      "${URL}?ts=$(date +%s)" || true)
             echo "HTTP $code"
             if [ "$code" = "200" ]; then
               echo "Prod healthy ✅"
               exit 0
             fi
-            sleep "$SMOKE_INTERVAL"
+            sleep "$INTERVAL"
           done
 
-          echo "❌ Prod health check failed after ${SMOKE_MAX_WAIT}s"
+          echo "❌ Prod health check failed after ${MAX_WAIT}s"
           exit 1
