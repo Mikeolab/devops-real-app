@@ -8,15 +8,16 @@ on:
 permissions:
   contents: read
 
-# Avoid overlapping deploys if multiple commits land quickly
+# Prevent overlapping deploys if multiple commits land quickly
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+# Global knobs; override per-step if needed
 env:
-  HEALTH_PATH: /health         # change if your health route differs
-  SMOKE_MAX_WAIT: 300          # seconds to wait for 200
-  SMOKE_INTERVAL: 5            # seconds between checks
+  HEALTH_PATH: /health          # change if your health route differs
+  SMOKE_MAX_WAIT: 300           # seconds to wait for 200
+  SMOKE_INTERVAL: 5             # seconds between checks
 
 jobs:
   test:
@@ -40,27 +41,26 @@ jobs:
 
     steps:
       - name: Deploy to Render (Staging)
-        # DEPLOY_HOOK_URL is the Staging env secret
+        # Staging env secret
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
 
       - name: Wait for /health to be 200 (Staging)
         shell: bash
         env:
-          # this resolves to the Staging env secret
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          HEALTH_PATH: ${{ env.HEALTH_PATH }}
-          SMOKE_MAX_WAIT: ${{ env.SMOKE_MAX_WAIT }}
-          SMOKE_INTERVAL: ${{ env.SMOKE_INTERVAL }}
+          APP_BASE_URL:    ${{ secrets.APP_BASE_URL }} # Staging env secret
+          HEALTH_PATH:     ${{ env.HEALTH_PATH }}
+          SMOKE_MAX_WAIT:  ${{ env.SMOKE_MAX_WAIT }}
+          SMOKE_INTERVAL:  ${{ env.SMOKE_INTERVAL }}
         run: |
           if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is empty. Set it to your Render URL, e.g. https://<app>.onrender.com"
+            echo "APP_BASE_URL (Staging) is empty. Set it to your Render URL, e.g. https://<app>.onrender.com"
             exit 1
           fi
-          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
 
+          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
           end=$(( SECONDS + SMOKE_MAX_WAIT ))
           while [ $SECONDS -lt $end ]; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
+            code=$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
             echo "HTTP $code"
             if [ "$code" = "200" ]; then
               echo "Staging healthy ✅"
@@ -81,25 +81,26 @@ jobs:
 
     steps:
       - name: Deploy to Render (Prod)
+        # Prod env secret
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
 
       - name: Wait for /health to be 200 (Prod)
         shell: bash
         env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          HEALTH_PATH: ${{ env.HEALTH_PATH }}
-          SMOKE_MAX_WAIT: ${{ env.SMOKE_MAX_WAIT }}
-          SMOKE_INTERVAL: ${{ env.SMOKE_INTERVAL }}
+          APP_BASE_URL:    ${{ secrets.APP_BASE_URL }} # Prod env secret
+          HEALTH_PATH:     ${{ env.HEALTH_PATH }}
+          SMOKE_MAX_WAIT:  ${{ env.SMOKE_MAX_WAIT }}
+          SMOKE_INTERVAL:  ${{ env.SMOKE_INTERVAL }}
         run: |
           if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is empty (Prod)."
+            echo "APP_BASE_URL (Prod) is empty."
             exit 1
           fi
-          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
 
+          echo "Probing: ${APP_BASE_URL}${HEALTH_PATH}"
           end=$(( SECONDS + SMOKE_MAX_WAIT ))
           while [ $SECONDS -lt $end ]; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
+            code=$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" "${APP_BASE_URL}${HEALTH_PATH}" || true)
             echo "HTTP $code"
             if [ "$code" = "200" ]; then
               echo "Prod healthy ✅"
