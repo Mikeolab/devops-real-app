@@ -1,35 +1,82 @@
-name: CI & Deploy
+name: CI gated (tests → staging → manual → prod)
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Avoid overlapping deploys from many pushes
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HEALTH_PATH: /health         # change if your health path differs
+  SMOKE_MAX_WAIT: 300          # seconds to wait for health to turn 200
+  SMOKE_INTERVAL: 5            # seconds between checks
 
 jobs:
-  build-deploy:
+  test:
     runs-on: ubuntu-latest
-
-    # Map the secret to an env var so the "if:" check is simple
-    env:
-      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
+      - run: npm ci
+      - run: npm run test:ci
 
-      - name: Install deps
-        run: npm ci
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Staging   # must match the env name in GitHub
+    steps:
+      - name: Deploy to Render (Staging)
+        run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
 
-      - name: Run tests (skip if none)
+      - name: Smoke check (Staging)
+        shell: bash
         run: |
-          npm run -s test || echo "no tests – continuing"
+          base="${{ secrets.APP_BASE_URL }}"
+          end=$((SECONDS + $SMOKE_MAX_WAIT))
+          echo "Waiting for $base$HEALTH_PATH to return 200..."
+          while [ $SECONDS -lt $end ]; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$base$HEALTH_PATH" || true)
+            echo "HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Staging healthy ✅"; exit 0
+            fi
+            sleep "$SMOKE_INTERVAL"
+          done
+          echo "Staging never became healthy within ${SMOKE_MAX_WAIT}s ❌"; exit 1
 
-      - name: Deploy to Render via Deploy Hook
-        if: ${{ env.DEPLOY_HOOK_URL != '' }}
-        run: curl -sS -X POST "$DEPLOY_HOOK_URL"
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Prod       # add required reviewers on this environment for approval gate
+    steps:
+      - name: Deploy to Render (Prod)
+        run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
+
+      - name: Smoke check (Prod)
+        shell: bash
+        run: |
+          base="${{ secrets.APP_BASE_URL }}"
+          end=$((SECONDS + $SMOKE_MAX_WAIT))
+          echo "Waiting for $base$HEALTH_PATH to return 200..."
+          while [ $SECONDS -lt $end ]; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$base$HEALTH_PATH" || true)
+            echo "HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Prod healthy ✅"; exit 0
+            fi
+            sleep "$SMOKE_INTERVAL"
+          done
+          echo "Prod never became healthy within ${SMOKE_MAX_WAIT}s ❌"; exit 1
