@@ -89,8 +89,8 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/quotes', async (_req, res) => {
   try {
     const [btc, eth] = await Promise.all([
-      fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC', { timeout: 5000 }).then(r => r.json()),
-      fetch('https://api.coinbase.com/v2/exchange-rates?currency=ETH', { timeout: 5000 }).then(r => r.json())
+      //fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC', { timeout: 5000 }).then(r => r.json()),
+      //fetch('https://api.coinbase.com/v2/exchange-rates?currency=ETH', { timeout: 5000 }).then(r => r.json())
     ]);
     const bitcoin_usd  = Number(btc?.data?.rates?.USD)  || null;
     const ethereum_usd = Number(eth?.data?.rates?.USD) || null;
