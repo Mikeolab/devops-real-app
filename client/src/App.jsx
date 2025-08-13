@@ -200,62 +200,130 @@ function Features() {
   );
 }
 
+function HowItWorks() {
+  return (
+    <section id="how-it-works" className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
+      <h2 className="text-2xl font-semibold text-white">How SoftDeploy works</h2>
+      <p className="mt-2 text-white/70 max-w-3xl">
+        Connect your repo, define tests, and ship with guardrails. SoftDeploy automates build, test
+        and deploy steps so teams release faster with fewer regressions.
+      </p>
+
+      <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 list-none">
+        {[
+          { n: "1", title: "Connect your stack", desc: "Link GitHub/GitLab and your cloud environments (AWS/GCP/Azure)." },
+          { n: "2", title: "Define tests & schedules", desc: "Run unit, API, E2E and performance suites on every PR and nightly." },
+          { n: "3", title: "Gate & deploy safely", desc: "Auto-checks block risky merges; one-click deploy with approvals & rollback." },
+          { n: "4", title: "See results & improve", desc: "Dashboards, logs and alerts show pass-rate, failures and trends across envs." }
+        ].map(step => (
+          <li key={step.n} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300 font-semibold">{step.n}</div>
+            <h3 className="text-base font-semibold text-white">{step.title}</h3>
+            <p className="mt-2 text-sm text-white/70">{step.desc}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
 function Roadmap() {
   return (
-    <Section id="roadmap" title="MVP Roadmap (First 3–6 Months)" subtitle="Start lean, ship value early, and layer integrations as you grow.">
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <TimelineItem phase="Phase 1: Research & Requirements" period="Week 1–2" items={[
-            "Define user types: QA engineers, developers, managers.",
-            "List use cases: schedule tests, trigger deploys, send Slack alerts.",
-            "Choose initial tech: FastAPI/Express, React, Postgres/Mongo.",
-            "Explore integrations: GitHub, Jenkins, GitLab, Docker.",
-          ]}/>
-        </Card>
-        <Card>
-          <TimelineItem phase="Phase 2: MVP Build" period="Month 1–2" items={[
-            "Test Scheduler UI (e.g., run Cypress nightly).",
-            "Execution via CLI / Docker runners.",
-            "Slack/Email result summaries.",
-            "One-click deploy using Actions/Jenkins.",
-            "Auth + user roles.",
-          ]}/>
-        </Card>
-        <Card>
-          <TimelineItem phase="Phase 3: Integrations" period="Month 3–4" items={[
-            "GitHub + GitLab support.",
-            "Dockerized test runs.",
-            "Plug-and-play suites: Cypress, Postman, JMeter, etc.",
-          ]}/>
-        </Card>
-        <Card>
-          <TimelineItem phase="Phase 4: Dashboard & Logs" period="Month 5–6" items={[
-            "Historical results + searchable logs.",
-            "Charts: pass rate, failure frequency.",
-            "Deployment history across envs.",
-          ]}/>
-        </Card>
+    <section id="how-it-works" className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
+  <h2 className="text-2xl font-semibold text-white">How SoftDeploy works</h2>
+  <p className="mt-2 text-white/70 max-w-3xl">
+    Connect your repo, define tests, and ship with guardrails. SoftDeploy automates build, test
+    and deploy steps so teams release faster with fewer regressions.
+  </p>
+
+  <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 list-none counter-reset">
+    {[
+      {
+        n: "1",
+        title: "Connect your stack",
+        desc: "Link GitHub/GitLab and your cloud environments (AWS/GCP/Azure)."
+      },
+      {
+        n: "2",
+        title: "Define tests & schedules",
+        desc: "Run unit, API, E2E and performance suites on every PR and nightly."
+      },
+      {
+        n: "3",
+        title: "Gate & deploy safely",
+        desc: "Auto-checks block risky merges; one-click deploy with approvals & rollback."
+      },
+      {
+        n: "4",
+        title: "See results & improve",
+        desc: "Dashboards, logs and alerts show pass-rate, failures and trends across envs."
+      }
+    ].map(step => (
+      <li key={step.n} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300 font-semibold">{step.n}</div>
+        <h3 className="text-base font-semibold text-white">{step.title}</h3>
+        <p className="mt-2 text-sm text-white/70">{step.desc}</p>
+      </li>
+    ))}
+  </ol>
+
+  <div className="mt-8 grid gap-4 sm:grid-cols-3">
+    {[
+      { k: "Faster releases", v: "Shorter cycle time with automated pipelines" },
+      { k: "Higher quality", v: "Issues caught earlier by CI tests" },
+      { k: "Lower risk", v: "Approvals, health checks & instant rollback" }
+    ].map(x => (
+      <div key={x.k} className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="text-sm text-white/60">{x.k}</div>
+        <div className="text-lg font-semibold text-white">{x.v}</div>
       </div>
-    </Section>
+    ))}
+  </div>
+</section>
   );
 }
 
 function TechStack() {
   return (
-    <Section id="tech" title="Suggested Tech Stack" subtitle="Solid, boring tech for an MVP that can scale later.">
-      <Card>
-        <div className="grid grid-cols-1">
-          <StackRow layer="Backend" tools={["FastAPI (Python)", "Node.js (Express)"]}/>
-          <StackRow layer="Frontend" tools={["React", "TailwindCSS", "Vite/Next.js"]}/>
-          <StackRow layer="Scheduling" tools={["Celery", "BullMQ", "cron"]}/>
-          <StackRow layer="CI/CD" tools={["GitHub Actions", "Jenkins"]}/>
-          <StackRow layer="Deployment" tools={["Docker", "GitHub Webhooks"]}/>
-          <StackRow layer="Alerts" tools={["Slack API", "SendGrid", "Mailgun"]}/>
-          <StackRow layer="Database" tools={["PostgreSQL", "MongoDB"]}/>
-          <StackRow layer="Hosting" tools={["Render", "Railway", "Fly.io"]}/>
-        </div>
-      </Card>
-    </Section>
+    <section id="use-cases" className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
+  <h2 className="text-2xl font-semibold text-white">What teams use SoftDeploy for</h2>
+  <p className="mt-2 text-white/70 max-w-3xl">
+    Practical workflows that increase confidence on every release.
+  </p>
+
+  <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {[
+      {
+        title: "PR checks that prevent regressions",
+        desc: "Run unit, API and E2E suites on every pull request; block merges when critical paths fail."
+      },
+      {
+        title: "Nightly E2E & API health",
+        desc: "Schedule Playwright/Cypress & API checks; trend pass-rate, p95 and error spikes over time."
+      },
+      {
+        title: "Performance budgets",
+        desc: "Catch slowdowns early with thresholds (e.g., p95, TTFB); alert on breaches."
+      },
+      {
+        title: "Staging → Prod with guardrails",
+        desc: "One-click deploy with approvals, /health probes and quick rollback if anything degrades."
+      },
+      {
+        title: "Incident-ready alerts",
+        desc: "Slack/email summaries with diffs, flaky-test hints and owners so the right person fixes fast."
+      },
+      {
+        title: "Audit & compliance",
+        desc: "Approvals, change logs and run history to satisfy audits and internal reviews."
+      }
+    ].map(card => (
+      <div key={card.title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <h3 className="text-base font-semibold text-white">{card.title}</h3>
+        <p className="mt-2 text-sm text-white/70">{card.desc}</p>
+      </div>
+    ))}
+  </div>
+</section>
   );
 }
 
