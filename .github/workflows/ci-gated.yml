@@ -67,34 +67,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+
+      - name: Detect backend app
+        id: detect
+        shell: bash
+        run: |
+          DIR=""
+          if [ -f src/app.js ] || [ -f src/app.ts ] || [ -f src/server.js ] || [ -f src/server.ts ]; then
+            DIR="."
+          elif [ -d server ]; then
+            DIR="server"
+          elif [ -d api ]; then
+            DIR="api"
+          fi
+
+          if [ -n "$DIR" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+            if [ -f "$DIR/package-lock.json" ]; then
+              echo "has_lock=true" >> "$GITHUB_OUTPUT"
+              echo "lockfile=$DIR/package-lock.json" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_lock=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Use cache only if a lockfile exists
+      - name: Setup Node (with cache)
+        if: steps.detect.outputs.exists == 'true' && steps.detect.outputs.has_lock == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: package-lock.json
-      - name: Detect backend app
-        id: detect
-        run: |
-          # Common locations for Express app entry expected by tests ('../src/app')
-          if [ -f src/app.js ] || [ -f src/app.ts ]; then
-            echo "dir=." >> $GITHUB_OUTPUT
-            echo "exists=true" >> $GITHUB_OUTPUT
-          elif [ -d server ]; then
-            echo "dir=server" >> $GITHUB_OUTPUT
-            echo "exists=true" >> $GITHUB_OUTPUT
-          elif [ -d api ]; then
-            echo "dir=api" >> $GITHUB_OUTPUT
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+          cache-dependency-path: ${{ steps.detect.outputs.lockfile }}
+
+      - name: Setup Node (no cache)
+        if: steps.detect.outputs.exists == 'true' && steps.detect.outputs.has_lock != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install deps (backend)
         if: steps.detect.outputs.exists == 'true'
-        run: npm ci
+        run: npm ci || npm install --omit=dev --no-audit --no-fund
+        working-directory: ${{ steps.detect.outputs.dir }}
+
       - name: Run backend tests
         if: steps.detect.outputs.exists == 'true'
         run: |
-          # If you have test:ci, use it; otherwise try jest/vitest; otherwise skip
           if npm run | grep -q "test:ci"; then
             npm run test:ci
           elif npm run | grep -q "test"; then
@@ -102,9 +124,11 @@ jobs:
           else
             echo "No backend tests configured; skipping"
           fi
+        working-directory: ${{ steps.detect.outputs.dir }}
+
       - name: No backend detected – skip tests
         if: steps.detect.outputs.exists != 'true'
-        run: echo "No backend (src/app) found; skipping backend tests ✅"
+        run: echo "No backend detected; skipping backend tests ✅"
 
   deploy-staging:
     needs: [test-client, test-backend]
@@ -116,7 +140,7 @@ jobs:
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
       - name: Grace period before health checks (Staging)
         run: sleep ${{ env.GRACE_SECONDS }}
-      - name: Wait for /health to be 200 (Staging)
+      - name: Wait for healthy (Staging)
         shell: bash
         env:
           APP_BASE_URL:   ${{ secrets.APP_BASE_URL }}
@@ -153,13 +177,13 @@ jobs:
         run: curl -fsSL -X POST "${{ secrets.DEPLOY_HOOK_URL }}"
       - name: Grace period before health checks (Prod)
         run: sleep ${{ env.GRACE_SECONDS }}
-      - name: Wait for /health to be 200 (Prod)
+      - name: Wait for healthy (Prod)
         shell: bash
         env:
           APP_BASE_URL:   ${{ secrets.APP_BASE_URL }}
           HEALTH_PATH:    ${{ env.HEALTH_PATH }}
           MAX_WAIT:       ${{ env.SMOKE_MAX_WAIT_PROD }}
-          INTERVAL:       ${{ env.SMOKE_INTERVAL }}
+          INTERVAL:       ${{ env.SMOKE_MAX_WAIT_SMOKE_INTERVAL }}
         run: |
           if [ -z "$APP_BASE_URL" ]; then
             echo "APP_BASE_URL (Prod) is empty."
