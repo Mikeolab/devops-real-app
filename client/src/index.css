@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Fallback so content stays readable even if utilities fail to load */
+html, body, #root { height: 100%; }
+body { background:#141516; color:#e5e7eb; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+a { color:#93c5fd; }
