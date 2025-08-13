@@ -104,18 +104,17 @@ function HeroCTA() {
           <div>
             <Badge>QA-first automation</Badge>
             <h1 className="mt-3 text-3xl sm:text-5xl font-semibold tracking-tight text-white">
-              Ship with confidence: schedule tests, get alerts, and deploy safely.
+              Deliver high‑quality software faster
             </h1>
             <p className="mt-4 text-white/70 max-w-xl">
-              A single pane for QA engineers, developers, and managers to orchestrate tests, view history,
-              and trigger one-click deployments across environments.
+              SoftDeploy automates your tests, integrates code continuously and deploys with confidence. Accelerate release cycles, improve code quality and respond to market changes quickly with built‑in security and performance checks.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a href="#roadmap" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-white/5 text-white ring-1 ring-white/15 hover:bg-white/10">
-                View MVP Roadmap
+              <a href="#demo" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-semibold">
+                Try Demo
               </a>
-              <a href="#features" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-semibold">
-                Explore Features
+              <a href="#features" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-white/5 text-white ring-1 ring-white/15 hover:bg-white/10">
+                See How It Works
               </a>
             </div>
             <div className="mt-8 grid grid-cols-3 gap-6">
@@ -185,15 +184,15 @@ function HeroCTA() {
 
 function Features() {
   const items = [
-    { title: "Scheduled Tests", desc: "Run unit, API, E2E, and performance suites on cron or on demand." },
-    { title: "Smart Alerts", desc: "Slack + email summaries with diffs, flaky test hints, and owners." },
-    { title: "One-click Deploys", desc: "Trigger pipelines with guardrails and rollbacks." },
-    { title: "Run History", desc: "Searchable logs, artifacts, and pass-rate trends over time." },
-    { title: "Roles & Auth", desc: "Login, permissions, approvals, and audit events." },
-    { title: "Dashboards", desc: "Failure frequency, lead time, and deployment metrics." },
+    { title: "Automated test pipelines", desc: "Schedule unit, API, E2E and performance tests to run on every commit and nightly, catching issues early." },
+    { title: "Continuous deployment", desc: "Deploy confidently to dev, staging and production with one click. Approvals and rollbacks protect you against bad releases." },
+    { title: "Smart alerts", desc: "Get actionable Slack/email summaries with diffs, flaky-test hints and owners so the right person can fix issues fast." },
+    { title: "Dashboards & history", desc: "View pass rates, failure frequency and deployment history across environments to spot trends and drive improvement." },
+    { title: "Role-based access control", desc: "Permissions, approvals and audit events built in to keep your team secure and compliant." },
+    { title: "Built-in security", desc: "Integrate security checks directly into your pipeline to catch vulnerabilities early and improve performance." },
   ];
   return (
-    <Section id="features" title="What you're building" subtitle="A QA & CI/CD automation platform designed for reliability and simplicity.">
+    <Section id="features" title="Accelerate delivery without compromising quality" subtitle="Mature CI/CD pipelines that shorten deployment time from hours to minutes, enabling teams to react to customer needs quickly.">
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((f, i) => <Feature key={i} {...f}/>)}
       </div>
